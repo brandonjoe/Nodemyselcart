@@ -1,0 +1,20 @@
+{
+  "name": "nodemysqltut",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ejs": "^2.6.2",
+    "express": "^4.17.1",
+    "mysql": "^2.17.1",
+    "paypal-rest-sdk": "^1.8.1",
+    "url": "^0.11.0"
+  }
+}
