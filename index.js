@@ -2,7 +2,7 @@ const express = require("express");
 const mysql = require("mysql");
 const ejs = require("ejs");
 const paypal = require("paypal-rest-sdk");
-var url = require('url');
+var url = require("url");
 
 paypal.configure({
   mode: "sandbox", //sandbox or live
@@ -20,7 +20,7 @@ const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "password",
-  database: "acme"
+  database: "shoppingcart"
 });
 
 //connect to mysql
@@ -41,7 +41,7 @@ app.get("/createdb", (req, res) => {
   });
 });
 
-app.get("/createproducts", (req, res) => {
+app.get("/createproducts", (req, res) => { //creates the list
   let sql =
     "CREATE TABLE products(id int AUTO_INCREMENT, name VARCHAR(255), quantity INT(3), price INT(3), total INT(3), PRIMARY KEY (id))";
   db.query(sql, (err, result) => {
@@ -50,7 +50,7 @@ app.get("/createproducts", (req, res) => {
   });
 });
 
-app.get("/removeproducts", (req, res) => {
+app.get("/removeproducts", (req, res) => { //remove the database
   let sqlclear = "DROP TABLE products";
   db.query(sqlclear, (err, result) => {
     if (err) throw err;
@@ -59,7 +59,7 @@ app.get("/removeproducts", (req, res) => {
   });
 });
 
-app.get("/products", (req, res) => {
+app.get("/products", (req, res) => { //creates a products table
   let sql = "SELECT * FROM products";
   db.query(sql, (err, result) => {
     if (err) throw err;
@@ -68,7 +68,7 @@ app.get("/products", (req, res) => {
     });
   });
 });
-app.get("/products/add", (req, res) => {
+app.get("/products/add", (req, res) => { //adds an item to the product list
   const { name, price } = req.query;
   const sql = `INSERT INTO products (name, quantity,  price, total) VALUES('${name}',0, ${price}, 0)`;
   db.query(sql, (err, results) => {
@@ -81,7 +81,7 @@ app.get("/products/add", (req, res) => {
     }
   });
 });
-app.get("/products/:id/update/:quantity", (req, res) => {
+app.get("/products/:id/update/:quantity", (req, res) => { //you're allowed to add or subtract items
   const sql = `UPDATE products SET quantity = ${req.params.quantity} WHERE id = ${req.params.id}`;
   let query = db.query(sql, (err, result) => {
     if (err) throw err;
@@ -91,7 +91,7 @@ app.get("/products/:id/update/:quantity", (req, res) => {
     );
   });
 });
-app.get("/products/:id/remove", (req, res) => {
+app.get("/products/:id/remove", (req, res) => { //removes an id from the product list
   const sql = `UPDATE products SET quantity = 0 WHERE id = ${req.params.id}`;
   let query = db.query(sql, (err, result) => {
     if (err) throw err;
@@ -100,7 +100,7 @@ app.get("/products/:id/remove", (req, res) => {
   });
 });
 
-app.get("/cart", (req, res) => {
+app.get("/cart", (req, res) => { //your cart is returned
   let sql =
     "SELECT name,quantity, SUM(price * quantity) AS total FROM products WHERE quantity > 0 GROUP BY name";
   db.query(sql, (err, result) => {
@@ -109,7 +109,7 @@ app.get("/cart", (req, res) => {
   });
 });
 
-app.get("/cart/checkout", (req, res) => {
+app.get("/cart/checkout", (req, res) => { //checkout, also has the total amount at this page
   let sql = "SELECT SUM(price * quantity) AS total FROM products ";
   db.query(sql, (err, result) => {
     if (err) throw err;
@@ -153,7 +153,7 @@ app.post("/pay", (req, res) => {
       ]
     };
     paypal.payment.create(create_payment_json, function(error, payment) {
-      console.log(payment)
+      console.log(payment);
       if (error) {
         throw error;
       } else {
@@ -198,7 +198,7 @@ app.get("/success", (req, res) => {
     });
   });
 });
-app.get("/removesubscription", (req, res) => {
+app.get("/removesubscription", (req, res) => { //remove the subscription table from the database. 
   let sqlclear = "DROP TABLE subscription";
   db.query(sqlclear, (err, result) => {
     if (err) throw err;
@@ -206,7 +206,7 @@ app.get("/removesubscription", (req, res) => {
     res.send("subscriptions cleared...");
   });
 });
-app.get("/createsubscription", (req, res) => {
+app.get("/createsubscription", (req, res) => { //creates a database for the subscription
   let sql =
     "CREATE TABLE subscription(id int AUTO_INCREMENT, name VARCHAR(255), price INT(3), cycle INT(3), shipping INT(3), tax INT(3), PRIMARY KEY (id))";
   db.query(sql, (err, result) => {
@@ -215,203 +215,190 @@ app.get("/createsubscription", (req, res) => {
   });
 });
 
-
-app.get('/subscription/add', (req, res) => {
-  const {name, price, cycle, shipping, tax} = req.query;
+app.get("/subscription/add", (req, res) => { //adds ampther subscription to the database. 
+  const { name, price, cycle, shipping, tax } = req.query;
   const sql = `INSERT INTO subscription (name, price, cycle, shipping, tax) VALUES('${name}', '${price}', '${cycle}', '${shipping}', '${tax}')`;
   db.query(sql, (err, results) => {
-    if(err) {
+    if (err) {
       return res.send(err);
     } else {
       return res.send(
         `made a subscription for ${name} at ${price} price for  ${cycle} months with tax and shipping costing $${shipping} and  $${tax}`
-      )
+      );
     }
-  })
-})
+  });
+});
 
 app.get("/subscription", (req, res) => {
   let sql = "SELECT * FROM subscription";
   db.query(sql, (err, result) => {
     if (err) throw err;
-    console.log(result[0].price); 
+    console.log(result[0].price);
     res.render("subscription");
   });
 });
-app.post("/subscriptionpayment", (req, res) => {
+app.post("/subscriptionpayment", (req, res) => { //makes a call to subscription payment in mysql that we added
   let sql = "SELECT * FROM subscription";
   db.query(sql, (err, result) => {
-    var d = new Date(Date.now() + 1*60*1000);
-  d.setSeconds(d.getSeconds() + 4);
-  var isDate = d.toISOString();
-  var isoDate = isDate.slice(0, 19) + 'Z';
+    var d = new Date(Date.now() + 1 * 60 * 1000);
+    d.setSeconds(d.getSeconds() + 4);
+    var isDate = d.toISOString();
+    var isoDate = isDate.slice(0, 19) + "Z";
 
-  var billingPlanAttributes = {
-      "description": "Clearly Next Subscription.",
-      "merchant_preferences": {
-          "auto_bill_amount": "yes",
-          "cancel_url": "http://localhost:5000/cancel",
-          "initial_fail_amount_action": "continue",
-          "max_fail_attempts": "2",
-          "return_url": "http://localhost:5000/subscriptioncomplete",
-          "setup_fee": {
-              "currency": "USD",
-              "value": "25"
-          }
+    var billingPlanAttributes = {
+      description: "Clearly Next Subscription.",
+      merchant_preferences: {
+        auto_bill_amount: "yes",
+        cancel_url: "http://localhost:5000/cancel",
+        initial_fail_amount_action: "continue",
+        max_fail_attempts: "2",
+        return_url: "http://localhost:5000/subscriptioncomplete", //in actual production, this woul dbe dyanmic 
+        setup_fee: {
+          currency: "USD",
+          value: "25"
+        }
       },
-      "name": `${result[0].name}`,
-      "payment_definitions": [
-          {
-              "amount": {
-                  "currency": "USD",
-                  "value": `${result[0].price}`
-              },
-              "charge_models": [
-                  {
-                      "amount": {
-                          "currency": "USD",
-                          "value": `${result[0].shipping}`
-                      },
-                      "type": "SHIPPING"
-                  },
-                  {
-                      "amount": {
-                          "currency": "USD",
-                          "value": `${result[0].tax}`
-                      },
-                      "type": "TAX"
-                  }
-              ],
-              "cycles": `${12}`,
-              "frequency": "MONTH",
-              "frequency_interval": "1",
-              "name": "1 year, once a month",
-              "type": "REGULAR"
+      name: `${result[0].name}`, //name of the subscription
+      payment_definitions: [
+        {
+          amount: {
+            currency: "USD",
+            value: `${result[0].price}` //price of the subscription
           },
-          // {
-          //     "amount": {
-          //         "currency": "USD",
-          //         "value": "20"
-          //     },
-          //     "charge_models": [
-          //         {
-          //             "amount": {
-          //                 "currency": "USD",
-          //                 "value": "10.60"
-          //             },
-          //             "type": "SHIPPING"
-          //         },
-          //         {
-          //             "amount": {
-          //                 "currency": "USD",
-          //                 "value": "20"
-          //             },
-          //             "type": "TAX"
-          //         }
-          //     ],
-          //     "cycles": "4",
-          //     "frequency": "MONTH",
-          //     "frequency_interval": "1",
-          //     "name": "Trial 1",
-          //     "type": "TRIAL"
-          // }
+          charge_models: [
+            {
+              amount: {
+                currency: "USD",
+                value: `${result[0].shipping}` //shipping price is there is any, usually leave for 0
+              },
+              type: "SHIPPING"
+            },
+            {
+              amount: {
+                currency: "USD",
+                value: `${result[0].tax}` //any tax that can be included
+              },
+              type: "TAX"
+            }
+          ],
+          cycles: `${12}`, //how long it should last
+          frequency: "MONTH",
+          frequency_interval: "1", //this is how much 1 frequency is. So if this was changed to 2, it would be once every 2 months. 
+          name: "1 year, once a month",
+          type: "REGULAR"
+        }
       ],
-      "type": "FIXED"
-  };
+      type: "FIXED"
+    };
 
-  var billingPlanUpdateAttributes = [
+    var billingPlanUpdateAttributes = [
       {
-          "op": "replace",
-          "path": "/",
-          "value": {
-              "state": "ACTIVE"
-          }
+        op: "replace",
+        path: "/",
+        value: {
+          state: "ACTIVE"
+        }
       }
-  ];
+    ];
 
-  var billingAgreementAttributes = {
-      "name": "Fast Speed Agreement",
-      "description": "Agreement for Fast Speed Plan",
-      "start_date": isoDate,
-      "plan": {
-          "id": "P-0NJ10521L3680291SOAQIVTQ"
+    var billingAgreementAttributes = {
+      name: "Tier 1 Adler plan",
+      description: "Agreement for Adler plan",
+      start_date: isoDate,
+      plan: {
+        id: "P-0NJ10521L3680291SOAQIVTQ"
       },
-      "payer": {
-          "payment_method": "paypal"
+      payer: {
+        payment_method: "paypal"
       },
-      "shipping_address": {
-          "line1": "StayBr111idge Suites",
-          "line2": "Cro12ok Street",
-          "city": "San Jose",
-          "state": "CA",
-          "postal_code": "95112",
-          "country_code": "US"
+      shipping_address: {
+        line1: "StayBr111idge Suites",
+        line2: "Cro12ok Street",
+        city: "San Jose",
+        state: "CA",
+        postal_code: "95112",
+        country_code: "US"
       }
-  };
+    };
 
-// Create the billing plan
-  paypal.billingPlan.create(billingPlanAttributes, function (error, billingPlan) {
+    // Create the billing plan
+    paypal.billingPlan.create(billingPlanAttributes, function(
+      error,
+      billingPlan
+    ) {
       if (error) {
-          console.log(error);
-          throw error;
+        console.log(error);
+        throw error;
       } else {
-          console.log("Create Billing Plan Response");
-          console.log(billingPlan);
+        console.log("Create Billing Plan Response");
+        console.log(billingPlan);
 
-          // Activate the plan by changing status to Active
-          paypal.billingPlan.update(billingPlan.id, billingPlanUpdateAttributes, function (error, response) {
-              if (error) {
-                  console.log(error);
-                  throw error;
-              } else {
-                  console.log("Billing Plan state changed to " + billingPlan.state);
-                  billingAgreementAttributes.plan.id = billingPlan.id;
+        // Activate the plan by changing status to Active
+        paypal.billingPlan.update(
+          billingPlan.id,
+          billingPlanUpdateAttributes,
+          function(error, response) {
+            if (error) {
+              console.log(error);
+              throw error;
+            } else {
+              console.log("Billing Plan state changed to " + billingPlan.state);
+              billingAgreementAttributes.plan.id = billingPlan.id;
 
-                  // Use activated billing plan to create agreement
-                  paypal.billingAgreement.create(billingAgreementAttributes, function (error, billingAgreement) {
-                      if (error) {
-                          console.log(error);
-                          throw error;
-                      } else {
-                          console.log("Create Billing Agreement Response");
-                          //console.log(billingAgreement);
-                          for (var index = 0; index < billingAgreement.links.length; index++) {
-                              if (billingAgreement.links[index].rel === 'approval_url') {
-                                  var approval_url = billingAgreement.links[index].href;
-                                  console.log("For approving subscription via Paypal, first redirect user to");
-                                  console.log(approval_url);
-                                  res.redirect(approval_url);
+              // Use activated billing plan to create agreement
+              paypal.billingAgreement.create(
+                billingAgreementAttributes,
+                function(error, billingAgreement) {
+                  if (error) {
+                    console.log(error);
+                    throw error;
+                  } else {
+                    console.log("Create Billing Agreement Response");
+                    //console.log(billingAgreement);
+                    for (
+                      var index = 0;
+                      index < billingAgreement.links.length;
+                      index++
+                    ) {
+                      if (
+                        billingAgreement.links[index].rel === "approval_url"
+                      ) {
+                        var approval_url = billingAgreement.links[index].href;
+                        console.log(
+                          "For approving subscription via Paypal, first redirect user to"
+                        );
+                        console.log(approval_url);
+                        res.redirect(approval_url);
 
-                                  console.log("Payment token is");
-                                  console.log(url.parse(approval_url, true).query.token);
-                                  // See billing_agreements/execute.js to see example for executing agreement
-                                  // after you have payment token
-                              }
-                          }
+                        console.log("Payment token is");
+                        console.log(url.parse(approval_url, true).query.token);
+                        // after this, the subscription is complete, and redirected to /subscription complete
                       }
-                  });
-              }
-          });
+                    }
+                  }
+                }
+              );
+            }
+          }
+        );
       }
+    });
   });
-  })
-  
-  
 });
 
 app.get("/subscriptioncomplete", (req, res) => {
   //if the user is able to make a successful transaction from subscriptions
   var token = req.query.token;
-    console.log(token,'tokentoken');
-    paypal.billingAgreement.execute(token, {}, function (error, billingAgreement) {
-        if (error) {
-            console.error(error);
-            throw error;
-        } else {
-            console.log(JSON.stringify(billingAgreement));
-            res.send(billingAgreement);
-        }
-    });
+  console.log(token, "tokentoken");
+  paypal.billingAgreement.execute(token, {}, function(error, billingAgreement) {
+    if (error) {
+      console.error(error);
+      throw error;
+    } else {
+      console.log(JSON.stringify(billingAgreement));
+      res.send(billingAgreement); //all the important info is send back to the browser
+    }
+  });
 });
 
 app.get("/cancel", (req, res) => {
